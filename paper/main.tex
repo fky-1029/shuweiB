@@ -1,0 +1,129 @@
+% !TeX encoding = utf-8
+% !TeX program = pdflatex
+%
+% 数维杯 B 题论文主文件（骨架）。
+% 编译：pdflatex（推荐）或 xelatex，需与 swmcmthesis.cls / swmcmthesis.cfg 同目录。
+% 图片：优先从 ../figures/（仓库根 figures/）查找。
+% 注意：正文模型/算法/结论由 A、B 撰写，本骨架只提供结构与符号表占位。
+
+\documentclass{swmcmthesis}
+
+% 图片搜索路径（根 figures/ 与 paper 内 figures/ 都找）
+\graphicspath{{../figures/}{figures/}}
+
+%%%%%%%%%%%%填写相关信息%%%%%%%%%%%%%%%%%%%%%%%%%%
+\title{Rapid UAV Localization via Coordinated Mobile Vehicles under Occlusion and Uncertainty} % TODO 论文题目，可再改
+
+\baominghao{SWBMCM2600001}           % TODO 改成自己的报名号
+
+\zubie{B}                            % 选题 B
+
+\abstract{%
+% TODO 摘要最后写：须覆盖四问的方法与主要结果（P1 可观测区域与最优站位、P2(1) 精度指标、
+% P2(2) 时间线与基线对比、P3 误差门槛、P4 的 η 与 t_last）。不要出现学校/导师/队员姓名。
+Summary of the results goes here.
+}
+
+\keywords{UAV localization; bearing intersection; observable region; vehicle routing; rescheduling}
+
+\date{2026}
+
+\begin{document}
+
+% 摘要页
+\maketitle
+
+% 目录
+\tableofcontents
+\newpage
+
+% 正文
+\setcounter{page}{1}
+
+\section{Introduction}
+% TODO C 写：背景（低空无人机、粗告警、双站方位交会）、研究目标、四问概述
+\subsection{Problem Background}
+% TODO
+\subsection{Restatement of the Problem}
+% TODO 用符号重述四问
+\subsection{Our Work}
+% TODO 方法与结论概览
+
+\section{Assumptions and Notations}
+\subsection{Assumptions}
+% TODO A/B 提供模型假设（与 shared/constants.md 保持一致）
+\begin{assumption}
+% 示例：车辆匀速 3 m/s，忽略加减速与转向时间。
+\end{assumption}
+
+\subsection{Notations}
+% 符号表（与 shared/constants.md 一致，待 A/B 复核）
+\begin{table}[!h]
+\centering
+\caption{Main notations}
+\begin{tabular}{ll}
+\toprule[1.5pt]
+Symbol & Description\\
+\midrule[1pt]
+$O$ & Dispatch center, $O=(50,50)$ m\\
+$B_k$ & Building $k$, $k=1,\dots,5$\\
+$V_j$ & Observation vehicle $j$, $j=1,\dots,5$\\
+$T_i$ & UAV target $i$, $i=1,2,3$\\
+$\theta$ & Alert azimuth, counterclockwise from due east ($^\circ$)\\
+$R$ & Alert horizontal distance (m)\\
+$H$ & Alert target altitude (m)\\
+$r$ & Horizontal distance from camera to target (m)\\
+$\phi$ & Line-of-sight elevation angle ($^\circ$)\\
+$\gamma$ & Intersection angle of two bearing lines ($^\circ$)\\
+$L$ & Baseline length between two stations (m; problem uses $B$)\\
+$Q$ & Observation quality metric, $Q=1/r$\\
+$s$ & Cumulative travel distance (m)\\
+$\Delta\psi$ & Horizontal bearing deviation ($^\circ$)\\
+$\sigma(s)$ & Localization error std, $\sigma(s)=a+bs$ (m)\\
+$\eta$ & Completion ratio in evaluation window\\
+$t_{\mathrm{last}}$ & Latest observation start time (s)\\
+$t_{\mathrm{rec}}$ & Communication recovery time (s)\\
+\bottomrule[1.5pt]
+\end{tabular}
+\end{table}
+
+\section{Task 1: Observable Region and Optimal Station (P1)}
+% TODO B 撰写：三类可观测性约束、可观测区域、Q=1/r 最优站位及俯仰最小半径、区域图
+
+\section{Task 2: Two-Station Localization and Vehicle Assignment (P2)}
+\subsection{Accuracy Model and Optimal Station Pair (P2(1))}
+% TODO B 撰写：精度指标定义、基线/交会角/距离的关系、30 s 行驶约束、退化情形讨论
+\subsection{Vehicle Reuse and Routing under Concurrent Alerts (P2(2))}
+% TODO A 撰写：车辆指派+路径规划、min-max 目标、每车完整时间线、与最近指派启发式对比
+
+\section{Task 3: Error Propagation on Horizontal Bearing Accuracy (P3)}
+% TODO B 撰写：三误差源、Δψ 传播模型、P(|Δψ|≤5°)≥0.95 的最大行驶距离、σ(s)=a+bs 约束
+
+\section{Task 4: Rescheduling under Disturbances (P4)}
+% TODO A 撰写：新告警/单车故障/通信中断及组合、场景集设计、η 与 t_last、重调度 vs 保留原计划
+
+\section{Sensitivity Analysis}
+% TODO 三人：对交会角、误差参数、扰动参数等的敏感性
+
+\section{Strengths and Weaknesses}
+% TODO 三人
+
+\section{Conclusion}
+% TODO 三人
+
+% 参考文献
+\begin{thebibliography}{9}
+% TODO 填入实际引用文献
+\bibitem{ref1} Reference entry goes here.
+\end{thebibliography}
+
+% 附录：核心代码
+\newpage
+\section*{Appendix}
+\addcontentsline{toc}{section}{Appendix}
+% TODO 关键程序以 lstlisting 放入附录，例如：
+% \begin{lstlisting}[language=python,caption={Observable region computation}]
+% ...
+% \end{lstlisting}
+
+\end{document}
