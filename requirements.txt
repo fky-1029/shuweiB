@@ -1,0 +1,4 @@
+# B 题 Python 依赖（按需增删，建议在 .venv 虚拟环境中安装）
+numpy
+matplotlib
+scipy

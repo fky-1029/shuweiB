@@ -1,0 +1,45 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+venv/
+env/
+
+# === 环境变量与密钥（严禁提交） ===
+.env
+.env.*
+*.key
+*.pem
+*.ppk
+id_rsa*
+credentials*
+secrets*
+
+# === 大文件与中间产物 ===
+*.zip
+*.rar
+*.7z
+data/
+raw/
+*.tmp
+*.log
+
+# === IDE / 系统 ===
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# === 构建与论文编译中间文件 ===
+build/
+dist/
+*.exe
+*.aux
+*.out
+*.toc
+*.bbl
+*.blg
+*.synctex.gz
+*.fls
+*.fdb_latexmk
