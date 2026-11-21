@@ -16,6 +16,7 @@ from constants import (
     VEHICLE_RADIUS,
     GIMBAL_PITCH_MIN,
     GIMBAL_PITCH_MAX,
+    GIMBAL_MAX_ANGULAR_VELOCITY,
 )
 
 
@@ -149,6 +150,37 @@ def calculate_elevation_angle(
 
     elevation_angle_rad = math.atan2(height_diff, horizontal_dist)
     return math.degrees(elevation_angle_rad)
+
+
+def compute_gimbal_rotate_time(
+    station: tuple[float, float],
+    target_pos: tuple[float, float, float],
+) -> tuple[float, float, float]:
+    """从正东水平初始姿态、停车后同时转动两轴的初次指向时间。
+
+    返回 (时间 s, 最短水平转角绝对值 °, 俯仰转角绝对值 °)。
+    不含行驶、观测或复位时间；若需复位，复位时长等于返回的时间。
+    与目标水平投影重合时方位角无定义，抛出 ValueError。
+    """
+    import math
+
+    try:
+        x, y = station
+        tx, ty, tz = target_pos
+        x, y, tx, ty, tz = (float(v) for v in (x, y, tx, ty, tz))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("station 应为二维坐标，target_pos 应为三维坐标") from exc
+    if not all(math.isfinite(v) for v in (x, y, tx, ty, tz)):
+        raise ValueError("站位和目标坐标必须为有限数值")
+
+    dx, dy = tx - x, ty - y
+    if dx == 0.0 and dy == 0.0:
+        raise ValueError("目标水平投影与站位重合：水平方位角无定义")
+    # atan2 返回 [-180°, 180°]，正东初始方位下取绝对值即最短转角。
+    pan_angle = abs(math.degrees(math.atan2(dy, dx)))
+    tilt_angle = abs(calculate_elevation_angle((x, y), (tx, ty, tz)))
+    t_rot = max(pan_angle, tilt_angle) / GIMBAL_MAX_ANGULAR_VELOCITY
+    return t_rot, pan_angle, tilt_angle
 
 
 def calculate_horizontal_distance(
