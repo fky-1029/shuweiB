@@ -9,7 +9,57 @@ import os
 
 # 添加 shared 目录到路径以便导入 constants
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from constants import CAMERA_HEIGHT, GIMBAL_PITCH_MIN, GIMBAL_PITCH_MAX
+from constants import (
+    BUILDINGS,
+    CAMERA_HEIGHT,
+    FIELD_SIZE,
+    VEHICLE_RADIUS,
+    GIMBAL_PITCH_MIN,
+    GIMBAL_PITCH_MAX,
+)
+
+
+def is_vehicle_position_valid(
+    vehicle_position: Tuple[float, float],
+    buildings: Optional[list] = None,
+    field_size: float = FIELD_SIZE,
+    vehicle_radius: float = VEHICLE_RADIUS,
+) -> bool:
+    """检查车辆圆盘是否完全位于场地内，且未侵入任何建筑。
+
+    车辆与场地边界或建筑边界恰好接触时允许停车。建筑碰撞使用
+    车辆中心到轴对齐矩形的最短欧氏距离判断，而非把建筑外扩为矩形。
+    """
+    import math
+
+    if len(vehicle_position) != 2:
+        raise ValueError("vehicle_position must contain exactly two coordinates")
+    if not math.isfinite(field_size) or field_size <= 0:
+        raise ValueError("field_size must be a positive finite number")
+    if not math.isfinite(vehicle_radius) or vehicle_radius < 0:
+        raise ValueError("vehicle_radius must be a non-negative finite number")
+
+    x, y = vehicle_position
+    if not math.isfinite(x) or not math.isfinite(y):
+        raise ValueError("vehicle_position coordinates must be finite")
+
+    # 使用闭区间判断：圆盘恰好接触场地边界时合法。
+    if not (
+        vehicle_radius <= x <= field_size - vehicle_radius
+        and vehicle_radius <= y <= field_size - vehicle_radius
+    ):
+        return False
+
+    for building in BUILDINGS if buildings is None else buildings:
+        nearest_x = min(max(x, building["x_min"]), building["x_max"])
+        nearest_y = min(max(y, building["y_min"]), building["y_max"])
+        distance = math.hypot(x - nearest_x, y - nearest_y)
+        # 给浮点计算留下极小余量，以免理论上恰好相切被误判；
+        # 这并不是将建筑的几何范围外扩。
+        if distance + 1e-12 < vehicle_radius:
+            return False
+
+    return True
 
 
 def check_observation_feasibility(
@@ -37,13 +87,30 @@ def check_observation_feasibility(
     注意:
         - 摄像头高度从 constants.CAMERA_HEIGHT 读取
         - 云台仰角范围: GIMBAL_PITCH_MIN 至 GIMBAL_PITCH_MAX
-        - 本函数为接口框架，核心算法尚未实现
+        - buildings 为 None 时使用 constants.BUILDINGS；空列表表示不检查建筑
     """
-    raise NotImplementedError(
-        "check_observation_feasibility 接口尚未实现。"
-        "需要实现：1) 几何距离与仰角计算；2) 建筑遮挡判断算法。"
-    )
+    active_buildings = BUILDINGS if buildings is None else buildings
+    horizontal_distance = calculate_horizontal_distance(vehicle_position, target_position)
+    elevation_angle = calculate_elevation_angle(vehicle_position, target_position)
+    position_valid = is_vehicle_position_valid(vehicle_position, active_buildings)
+    occluded, _ = check_building_occlusion(vehicle_position, target_position, active_buildings)
+    angle_valid = is_within_gimbal_range(elevation_angle)
 
+    feasible = position_valid and not occluded and angle_valid
+    reasons = []
+    if not position_valid:
+        reasons.append("车辆位置不合法")
+    if occluded:
+        reasons.append("建筑遮挡")
+    if not angle_valid:
+        reasons.append("云台仰角超出范围")
+    return {
+        "feasible": feasible,
+        "horizontal_distance": horizontal_distance,
+        "elevation_angle": elevation_angle,
+        "occluded": occluded,
+        "reason": "；".join(reasons),
+    }
 
 def calculate_elevation_angle(
     vehicle_position: Tuple[float, float],
@@ -127,11 +194,60 @@ def check_building_occlusion(
     注意:
         需要考虑三维视线与建筑物立方体的相交判断
     """
-    raise NotImplementedError(
-        "check_building_occlusion 尚未实现。"
-        "需要实现三维射线与建筑物包围盒的相交检测算法。"
-        "这是 P1 的核心几何问题，需要队员自主设计算法。"
+    camera = _get_camera_position(vehicle_position)
+
+    direction = (
+        target_position[0] - camera[0],
+        target_position[1] - camera[1],
+        target_position[2] - camera[2]
     )
+
+    for building in buildings:
+        t_min = 0.0
+        t_max = 1.0
+        intersects = True
+
+        bounds_min = (
+            building["x_min"],
+            building["y_min"],
+            0.0
+        )
+
+        bounds_max = (
+            building["x_max"],
+            building["y_max"],
+            building["height"]
+        )
+
+        for axis in range(3):
+            p = camera[axis]
+            d = direction[axis]
+            lower = bounds_min[axis]
+            upper = bounds_max[axis]
+
+            if abs(d) < 1e-12:
+                if p < lower or p > upper:
+                    intersects = False
+                    break
+
+            else:
+                t1 = (lower - p) / d
+                t2 = (upper - p) / d
+
+                t_min = max(t_min, min(t1, t2))
+                t_max = min(t_max, max(t1, t2))
+
+                if t_min > t_max:
+                    intersects = False
+                    break
+
+        if intersects:
+            return True, building["id"]
+
+    return False, None
+
+
+
 
 
 def is_within_gimbal_range(elevation_angle: float) -> bool:
