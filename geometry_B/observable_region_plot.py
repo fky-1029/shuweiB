@@ -14,7 +14,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
-from matplotlib.patches import Rectangle
+from matplotlib.colors import BoundaryNorm, ListedColormap
+from matplotlib.patches import Patch, Rectangle
 
 from shared.constants import BUILDINGS, FIELD_SIZE, TARGETS
 
@@ -90,11 +91,15 @@ def plot_field(
         fig = ax.figure
 
     if observable is not None:
-        # 只显示 True 区域；False 区域保持白底，避免暗示“已计算为不可观测”。
-        mask = np.ma.masked_where(~np.asarray(observable, dtype=bool), observable)
+        # 行是 y、列是 x；同时绘制两类采样点，不能把 False 留作背景色。
+        values = np.asarray(observable, dtype=bool).astype(np.uint8)
         ax.pcolormesh(
-            np.asarray(x_values), np.asarray(y_values), mask,
-            shading="auto", cmap="Greens", alpha=0.35,
+            np.asarray(x_values), np.asarray(y_values), values,
+            shading="nearest",
+            cmap=ListedColormap(["#D36B72", "#338CC9"]),
+            norm=BoundaryNorm([-0.5, 0.5, 1.5], 2),
+            rasterized=True,
+            zorder=1,
         )
 
     for building in buildings:
@@ -102,16 +107,18 @@ def plot_field(
             (building["x_min"], building["y_min"]),
             building["x_max"] - building["x_min"],
             building["y_max"] - building["y_min"],
-            facecolor="#9aa3ad", edgecolor="#4b5563", linewidth=1.0,
+            facecolor="#374151", edgecolor="#111827", linewidth=1.0,
+            zorder=3,
         ))
         ax.text(
             (building["x_min"] + building["x_max"]) / 2,
             (building["y_min"] + building["y_max"]) / 2,
-            f"B{building['id']}", ha="center", va="center", color="#17202a",
+            f"B{building['id']}", ha="center", va="center", color="white",
+            zorder=4,
         )
 
-    ax.scatter(target["x"], target["y"], marker="^", s=75, c="#c2410c",
-               edgecolors="white", linewidths=0.8, zorder=4, label="T1")
+    target_marker = ax.scatter(target["x"], target["y"], marker="^", s=150, c="#FACC15",
+               edgecolors="#111827", linewidths=1.4, zorder=5, label="T1 target")
     ax.set_xlim(0, FIELD_SIZE)
     ax.set_ylim(0, FIELD_SIZE)
     ax.set_aspect("equal", adjustable="box")
@@ -121,8 +128,18 @@ def plot_field(
         "P1: T1 observable region (sampled grid)"
         if observable is not None else "P1: field and T1 (observability not evaluated)"
     )
-    ax.grid(True, alpha=0.2)
-    ax.legend(loc="upper right")
+    ax.grid(True, color="#111827", alpha=0.15, linewidth=0.6, zorder=2)
+    if observable is not None:
+        legend_handles = [
+            Patch(facecolor="#338CC9", label="Observable (sampled)"),
+            Patch(facecolor="#D36B72", label="Not observable (sampled)"),
+            Patch(facecolor="#374151", label="Buildings"),
+            target_marker,  # T1 散点图标
+        ]
+        ax.legend(handles=legend_handles, loc="upper center", ncol=2,
+                  bbox_to_anchor=(0.5, -0.07), frameon=True)
+    else:
+        ax.legend(loc="upper right")
     return fig, ax
 
 

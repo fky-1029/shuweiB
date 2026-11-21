@@ -3,6 +3,10 @@
 所有参数均来自题目原文，不得擅自添加未规定的限制
 """
 
+import csv
+from functools import lru_cache
+from pathlib import Path
+
 # ==================== 场地参数 ====================
 FIELD_SIZE = 100.0  # 场地尺寸: 100m × 100m
 
@@ -143,3 +147,25 @@ for target_polar in TARGETS_POLAR:
     })
 
 # 注意：部署阶段目标视为静止，无运动速度参数
+
+
+# ==================== 预计算可观测位置（工程数据）====================
+def get_observable_points(target_id: str) -> tuple[tuple[float, float], ...]:
+    """读取目标在 0.5 m 网格上的全部可观测车辆中心坐标。
+
+    返回不可变坐标元组；结果按目标缓存，重复调用不会重新读取 CSV。
+    相对本文件定位数据，调用方不必切换工作目录。
+    """
+    if target_id not in ("T1", "T2", "T3"):
+        raise ValueError("target_id 必须是 T1、T2 或 T3")
+    return _load_observable_points(target_id)
+
+
+@lru_cache(maxsize=3)
+def _load_observable_points(target_id: str) -> tuple[tuple[float, float], ...]:
+    path = Path(__file__).resolve().parent / "observable_points" / f"{target_id}_0p5m.csv"
+    with path.open("r", encoding="utf-8", newline="") as stream:
+        reader = csv.DictReader(stream)
+        if reader.fieldnames != ["x_east_m", "y_north_m"]:
+            raise ValueError(f"CSV 坐标列不符合约定：{path}")
+        return tuple((float(row["x_east_m"]), float(row["y_north_m"])) for row in reader)
