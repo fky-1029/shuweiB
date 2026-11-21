@@ -116,7 +116,7 @@ def test_targets_cartesian():
     print("目标笛卡尔坐标转换测试")
     print("=" * 50)
 
-    # ⚠️ 待人工确认：PDF 未明确方位角定义
+    # PDF 第1-2页明确方位角从正东逆时针计，并给出以下公式
     # 当前采用：x = 50 + R*cos(θ), y = 50 + R*sin(θ)
     # 期望坐标根据此公式计算
 
@@ -141,7 +141,7 @@ def test_targets_cartesian():
 
         print(f"✓ T{i+1}: ({target['x']:.2f}, {target['y']:.2f}, {target['z']:.2f})")
 
-    print("⚠️  注意：方位角定义需人工确认（PDF 未明确说明）")
+    print("✓ 方位角从正东逆时针计（PDF 第1页），转换公式见第2页")
     print("✓ 所有目标坐标转换公式一致")
     return True
 

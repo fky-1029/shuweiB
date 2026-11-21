@@ -62,10 +62,26 @@ def calculate_elevation_angle(
     注意:
         摄像头实际高度为车辆地面位置 + CAMERA_HEIGHT
     """
-    raise NotImplementedError(
-        "calculate_elevation_angle 尚未实现。"
-        "需要根据车辆位置、摄像头高度和目标位置计算仰角。"
-    )
+    import math
+
+    # 计算水平距离
+    horizontal_dist = calculate_horizontal_distance(vehicle_position, target_position)
+
+    # 计算摄像头与目标的高度差
+    camera_height = CAMERA_HEIGHT
+    height_diff = target_position[2] - camera_height
+
+    # 计算仰角（使用 atan2 处理特殊情况）
+    if horizontal_dist < 1e-9:  # 目标在正上方或正下方
+        if height_diff > 0:
+            return 90.0
+        elif height_diff < 0:
+            return -90.0
+        else:
+            return 0.0
+
+    elevation_angle_rad = math.atan2(height_diff, horizontal_dist)
+    return math.degrees(elevation_angle_rad)
 
 
 def calculate_horizontal_distance(
@@ -82,10 +98,12 @@ def calculate_horizontal_distance(
     返回:
         float: 水平距离 [m]
     """
-    raise NotImplementedError(
-        "calculate_horizontal_distance 尚未实现。"
-        "需要计算 (x, y) 平面上的欧氏距离。"
-    )
+    import math
+
+    dx = target_position[0] - vehicle_position[0]
+    dy = target_position[1] - vehicle_position[1]
+
+    return math.sqrt(dx**2 + dy**2)
 
 
 def check_building_occlusion(

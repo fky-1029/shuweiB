@@ -89,7 +89,7 @@ DISPATCH_CENTER = {'x': 50.0, 'y': 50.0}
 #   - horizontal_distance: 水平距离（m）
 #   - altitude: 高度（m，离地高度）
 #
-# ⚠️ 待人工确认：PDF 未明确方位角起始方向和旋转方向
+# PDF 第1页规定：方位角从正东逆时针计，x 轴指东、y 轴指北
 # 笛卡尔坐标转换公式：x = 50 + R*cos(θ), y = 50 + R*sin(θ)
 #   其中 θ 为方位角（度，需转换为弧度）
 
@@ -99,7 +99,7 @@ def _azimuth_to_cartesian(azimuth_deg, horizontal_distance):
     """
     将方位角转换为笛卡尔坐标
 
-    ⚠️ 待人工确认：PDF 未明确说明方位角定义
+    PDF 第1-2页规定：方位角从正东逆时针计，并给出以下转换公式
     当前采用：x = 50 + R*cos(θ), y = 50 + R*sin(θ)
     """
     azimuth_rad = math.radians(azimuth_deg)
