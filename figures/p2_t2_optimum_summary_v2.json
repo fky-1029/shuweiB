@@ -1,0 +1,122 @@
+{
+  "scope": "confirmed-reachable 0.5m T2 grid; pending relaxation also checked",
+  "winner": {
+    "vehicle_a": 1,
+    "vehicle_b": 3,
+    "station_a": [
+      8.0,
+      67.5
+    ],
+    "station_b": [
+      6.0,
+      75.5
+    ],
+    "travel_time_a_s": 17.98533353102528,
+    "travel_time_b_s": 4.400126260814695,
+    "r1_m": 5.845850981236342,
+    "r2_m": 5.855715243556755,
+    "baseline_m": 8.246211251235321,
+    "alpha1_deg": 58.79371911688296,
+    "alpha2_deg": 329.18151267333,
+    "gamma_deg": 89.61220644355294,
+    "rmse_m": 0.14441638392829942,
+    "degenerate": false
+  },
+  "verification": {
+    "independent_jacobian_rmse_m": 0.14441638392829942,
+    "station_a_observable": true,
+    "station_b_observable": true
+  },
+  "pending_geometric_relaxation": [
+    {
+      "vehicle_a": 1,
+      "vehicle_b": 2,
+      "geometric_better_pairs": 0,
+      "promising_pending_a": 0,
+      "promising_pending_b": 0,
+      "best_relaxed_stations": null,
+      "best_relaxed_rmse_m": null
+    },
+    {
+      "vehicle_a": 1,
+      "vehicle_b": 3,
+      "geometric_better_pairs": 0,
+      "promising_pending_a": 0,
+      "promising_pending_b": 0,
+      "best_relaxed_stations": null,
+      "best_relaxed_rmse_m": null
+    },
+    {
+      "vehicle_a": 1,
+      "vehicle_b": 4,
+      "geometric_better_pairs": 0,
+      "promising_pending_a": 0,
+      "promising_pending_b": 0,
+      "best_relaxed_stations": null,
+      "best_relaxed_rmse_m": null
+    },
+    {
+      "vehicle_a": 1,
+      "vehicle_b": 5,
+      "geometric_better_pairs": 0,
+      "promising_pending_a": 0,
+      "promising_pending_b": 0,
+      "best_relaxed_stations": null,
+      "best_relaxed_rmse_m": null
+    },
+    {
+      "vehicle_a": 2,
+      "vehicle_b": 3,
+      "geometric_better_pairs": 0,
+      "promising_pending_a": 0,
+      "promising_pending_b": 0,
+      "best_relaxed_stations": null,
+      "best_relaxed_rmse_m": null
+    },
+    {
+      "vehicle_a": 2,
+      "vehicle_b": 4,
+      "geometric_better_pairs": 0,
+      "promising_pending_a": 0,
+      "promising_pending_b": 0,
+      "best_relaxed_stations": null,
+      "best_relaxed_rmse_m": null
+    },
+    {
+      "vehicle_a": 2,
+      "vehicle_b": 5,
+      "geometric_better_pairs": 0,
+      "promising_pending_a": 0,
+      "promising_pending_b": 0,
+      "best_relaxed_stations": null,
+      "best_relaxed_rmse_m": null
+    },
+    {
+      "vehicle_a": 3,
+      "vehicle_b": 4,
+      "geometric_better_pairs": 0,
+      "promising_pending_a": 0,
+      "promising_pending_b": 0,
+      "best_relaxed_stations": null,
+      "best_relaxed_rmse_m": null
+    },
+    {
+      "vehicle_a": 3,
+      "vehicle_b": 5,
+      "geometric_better_pairs": 0,
+      "promising_pending_a": 0,
+      "promising_pending_b": 0,
+      "best_relaxed_stations": null,
+      "best_relaxed_rmse_m": null
+    },
+    {
+      "vehicle_a": 4,
+      "vehicle_b": 5,
+      "geometric_better_pairs": 0,
+      "promising_pending_a": 0,
+      "promising_pending_b": 0,
+      "best_relaxed_stations": null,
+      "best_relaxed_rmse_m": null
+    }
+  ]
+}

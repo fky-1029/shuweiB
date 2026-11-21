@@ -17,6 +17,7 @@ from matplotlib.figure import Figure
 from matplotlib.colors import BoundaryNorm, ListedColormap
 from matplotlib.patches import Patch, Rectangle
 
+from geometry_B.figure_style import COLORS, apply_figure_style
 from shared.constants import BUILDINGS, FIELD_SIZE, TARGETS
 
 
@@ -72,11 +73,15 @@ def plot_field(
     buildings: Sequence[dict] = BUILDINGS,
     target: dict = TARGETS[0],
     ax: Optional[Axes] = None,
+    candidate_positions: Optional[Sequence[tuple[float, float]]] = None,
+    boundary_positions: Optional[Sequence[tuple[float, float]]] = None,
+    optimal_position: Optional[tuple[float, float]] = None,
 ) -> tuple[Figure, Axes]:
     """绘制场地、建筑投影和 T1；可选地叠加已验证的布尔网格。
 
     不传 ``observable`` 时只绘制场景底图。传入结果时必须同时传入坐标轴，
-    且数组形状必须为 ``(len(y_values), len(x_values))``。
+    且数组形状必须为 ``(len(y_values), len(x_values))``。候选点、边界点及
+    最优站位仅在调用者明确传入时绘制，绘图函数不会自行推断。
     """
     if (observable is None) != (x_values is None or y_values is None):
         raise ValueError("observable requires both x_values and y_values")
@@ -85,8 +90,9 @@ def plot_field(
         if np.asarray(observable).shape != expected_shape:
             raise ValueError(f"observable shape must be {expected_shape}")
 
+    apply_figure_style()
     if ax is None:
-        fig, ax = plt.subplots(figsize=(8, 8), constrained_layout=True)
+        fig, ax = plt.subplots(figsize=(6, 4.5), constrained_layout=True)
     else:
         fig = ax.figure
 
@@ -96,7 +102,7 @@ def plot_field(
         ax.pcolormesh(
             np.asarray(x_values), np.asarray(y_values), values,
             shading="nearest",
-            cmap=ListedColormap(["#D36B72", "#338CC9"]),
+            cmap=ListedColormap([COLORS["infeasible"], COLORS["feasible"]]),
             norm=BoundaryNorm([-0.5, 0.5, 1.5], 2),
             rasterized=True,
             zorder=1,
@@ -107,37 +113,63 @@ def plot_field(
             (building["x_min"], building["y_min"]),
             building["x_max"] - building["x_min"],
             building["y_max"] - building["y_min"],
-            facecolor="#374151", edgecolor="#111827", linewidth=1.0,
+            facecolor=COLORS["building"], edgecolor="#333333", linewidth=0.8,
             zorder=3,
         ))
         ax.text(
             (building["x_min"] + building["x_max"]) / 2,
             (building["y_min"] + building["y_max"]) / 2,
-            f"B{building['id']}", ha="center", va="center", color="white",
+            f"B{building['id']}", ha="center", va="center", color="white", fontsize=8,
             zorder=4,
         )
 
-    target_marker = ax.scatter(target["x"], target["y"], marker="^", s=150, c="#FACC15",
-               edgecolors="#111827", linewidths=1.4, zorder=5, label="T1 target")
+    target_marker = ax.scatter(target["x"], target["y"], marker="^", s=75, c=COLORS["target"],
+               edgecolors="#333333", linewidths=0.8, zorder=5, label="T1 target")
+    overlays = []
+    if candidate_positions is not None:
+        candidates = np.asarray(candidate_positions, dtype=float).reshape(-1, 2)
+        if not np.isfinite(candidates).all():
+            raise ValueError("candidate_positions must be finite coordinates")
+        if len(candidates):
+            overlays.append(ax.scatter(candidates[:, 0], candidates[:, 1],
+                                       marker="o", s=34, facecolors="none",
+                                       edgecolors=COLORS["vehicle"], linewidths=0.9,
+                                       zorder=6, label="Candidates (supplied)"))
+    if boundary_positions is not None:
+        boundary = np.asarray(boundary_positions, dtype=float).reshape(-1, 2)
+        if not np.isfinite(boundary).all():
+            raise ValueError("boundary_positions must be finite coordinates")
+        if len(boundary):
+            overlays.append(ax.scatter(boundary[:, 0], boundary[:, 1],
+                                       marker=".", s=8, c=COLORS["feasible"], zorder=5,
+                                       label="Boundary samples (supplied)"))
+    if optimal_position is not None:
+        optimum = np.asarray(optimal_position, dtype=float)
+        if optimum.shape != (2,) or not np.isfinite(optimum).all():
+            raise ValueError("optimal_position must be a finite (x, y) pair")
+        overlays.append(ax.scatter(*optimum, marker="*", s=120,
+                                   c=COLORS["vehicle"], edgecolors="#333333", linewidths=0.8,
+                                   zorder=7, label="Optimum (supplied)"))
     ax.set_xlim(0, FIELD_SIZE)
     ax.set_ylim(0, FIELD_SIZE)
     ax.set_aspect("equal", adjustable="box")
-    ax.set_xlabel("East x / m")
-    ax.set_ylabel("North y / m")
+    ax.set_xlabel("x (m, east)")
+    ax.set_ylabel("y (m, north)")
     ax.set_title(
         "P1: T1 observable region (sampled grid)"
         if observable is not None else "P1: field and T1 (observability not evaluated)"
     )
-    ax.grid(True, color="#111827", alpha=0.15, linewidth=0.6, zorder=2)
+    ax.grid(True, color="#777777", alpha=0.3, linewidth=0.5, zorder=2)
     if observable is not None:
         legend_handles = [
-            Patch(facecolor="#338CC9", label="Observable (sampled)"),
-            Patch(facecolor="#D36B72", label="Not observable (sampled)"),
-            Patch(facecolor="#374151", label="Buildings"),
-            target_marker,  # T1 散点图标
+            Patch(facecolor=COLORS["feasible"], label="Observable (sampled)"),
+            Patch(facecolor=COLORS["infeasible"], label="Not observable (sampled)"),
+            Patch(facecolor=COLORS["building"], label="Buildings"),
+            target_marker,
+            *overlays,
         ]
         ax.legend(handles=legend_handles, loc="upper center", ncol=2,
-                  bbox_to_anchor=(0.5, -0.07), frameon=True)
+                  bbox_to_anchor=(0.5, -0.12), frameon=True)
     else:
         ax.legend(loc="upper right")
     return fig, ax
@@ -146,5 +178,5 @@ def plot_field(
 def save_scene(path: str | Path, **plot_kwargs) -> None:
     """保存底图或调用方提供的结果图；不会自行计算可观测区域。"""
     fig, _ = plot_field(**plot_kwargs)
-    fig.savefig(path, dpi=160)
+    fig.savefig(path, dpi=200)
     plt.close(fig)

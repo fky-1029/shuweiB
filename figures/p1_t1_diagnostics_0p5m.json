@@ -1,0 +1,51 @@
+{
+  "source_csv": "shared/observable_points/T1_0p5m.csv",
+  "source_npz": "figures/p1_t1_observable_grid_0p5m.npz",
+  "target_xyz_m": [
+    84.64101615137756,
+    70.0,
+    45.0
+  ],
+  "grid_spacing_m": 0.5,
+  "grid_shape_yx": [
+    201,
+    201
+  ],
+  "valid_points": 22788,
+  "invalid_grid_points": 17613,
+  "unique_points": 22788,
+  "boundary_grid_cells": 2737,
+  "boundary_sample_count": 60,
+  "boundary_grid_mismatch_count": 0,
+  "boundary_offset_m": [
+    0.125,
+    0.125
+  ],
+  "sample_seed": 20261121,
+  "r_horizontal_m": {
+    "min": 7.5854486299326656,
+    "p05": 13.142248966208037,
+    "median": 51.627460719536955,
+    "mean": 49.45237239287736,
+    "p95": 83.29869260275652,
+    "max": 94.77699386815148
+  },
+  "theta_elevation_deg": {
+    "min": 24.40363421778685,
+    "p05": 27.303442827419307,
+    "median": 39.79057977331168,
+    "mean": 44.52038603417528,
+    "p95": 73.0050819417682,
+    "max": 79.9956212158575
+  },
+  "Q_inverse_m": {
+    "min": 0.01055108375130725,
+    "p05": 0.012004990385324644,
+    "median": 0.019369536795394084,
+    "mean": 0.0284443791012547,
+    "p95": 0.07609047755610525,
+    "max": 0.13183135880110453
+  },
+  "nan_or_inf_count": 0,
+  "note": "只有网格边缘样本与偏移点直接判定；并非连续边界证明或最优站位。"
+}

@@ -1,0 +1,49 @@
+{
+  "target_xyz_m": [
+    84.64101615137756,
+    70.0,
+    45.0
+  ],
+  "radius_lower_bound_m": 7.582060170463998,
+  "known_continuous_feasible_witness_xy_m": [
+    80.00207316612234,
+    75.99731976870402
+  ],
+  "witness_check": {
+    "feasible": true,
+    "horizontal_distance": 7.582060170463998,
+    "elevation_angle": 80.0,
+    "occluded": false,
+    "reason": ""
+  },
+  "sample_count": 360,
+  "feasible_sample_count": 284,
+  "raw_feasible_sample_count": 262,
+  "rounding_adjusted_count": 31,
+  "max_adjustment_m": 1.3322676295501878e-14,
+  "time_type": "straight_line_lower_bound",
+  "comparison_count": 1420,
+  "best_screening_row": {
+    "circle_angle_deg": 260,
+    "vehicle_id": "V4",
+    "start_x_m": 88.0,
+    "start_y_m": 68.0,
+    "station_x_m": 83.32440521981547,
+    "station_y_m": 62.53312836032199,
+    "straight_distance_m": 7.193599382312343,
+    "driving_time_s": 2.397866460770781,
+    "gimbal_aim_time_s": 2.6666666666666687,
+    "deployment_time_s": 5.06453312743745,
+    "time_type": "straight_line_lower_bound",
+    "sight_clearance_m": 4.324405219815475,
+    "parking_clearance_m": 2.8244052198154748,
+    "fastest_for_station": true
+  },
+  "selected_actual_path_sample": null,
+  "time_tie_tolerance_s": 1e-09,
+  "known_witness_sight_clearance_m": 3.8501454800765016,
+  "known_witness_parking_clearance_m": 3.596798554086911,
+  "actual_path_optimum_identified": false,
+  "continuous_circle_deployment_optimum_proven": false,
+  "note": "未提供避障路径接口时只给直线行驶+指向时间下界；圆周每 1° 扫描不能证明连续部署时间最优。"
+}
