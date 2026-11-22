@@ -1,0 +1,153 @@
+{
+  "z_975": 1.959963984540054,
+  "linear_sigma_bound_m": 1.638445984781626,
+  "exact_sigma_bound_m": 1.6367451685555632,
+  "linear_s_max_m": 66.9222992390813,
+  "exact_s_max_m": 66.83725842777815,
+  "linear_a_plus_80b_bound_m": 1.638445984781626,
+  "exact_a_plus_80b_bound_m": 1.6367451685555632,
+  "exact_root_residual": 4.120037644383956e-13,
+  "scenarios": {
+    "s=0": {
+      "sigma_p_m": 0.3,
+      "linear_probability": 0.9999956478548808,
+      "exact_probability": 0.999995647039037,
+      "simulation": {
+        "seed": 20261122,
+        "n": 100000,
+        "success": 100000,
+        "probability": 1.0,
+        "wilson_95": [
+          0.999961586887417,
+          1.0
+        ],
+        "linear_empirical_probability": 1.0
+      }
+    },
+    "s=linear boundary": {
+      "sigma_p_m": 1.638445984781626,
+      "linear_probability": 0.95,
+      "exact_probability": 0.9497982126065851,
+      "simulation": {
+        "seed": 20261123,
+        "n": 1000000,
+        "success": 949595,
+        "probability": 0.949595,
+        "wilson_95": [
+          0.9491644709095058,
+          0.9500220749024063
+        ],
+        "linear_empirical_probability": 0.949834
+      }
+    },
+    "s=exact boundary": {
+      "sigma_p_m": 1.6367451685555632,
+      "linear_probability": 0.9502010992773329,
+      "exact_probability": 0.950000000000412,
+      "simulation": {
+        "seed": 20261124,
+        "n": 1000000,
+        "success": 950008,
+        "probability": 0.950008,
+        "wilson_95": [
+          0.9495791367706957,
+          0.9504334058681837
+        ],
+        "linear_empirical_probability": 0.950292
+      }
+    },
+    "s=exact boundary repeat": {
+      "sigma_p_m": 1.6367451685555632,
+      "linear_probability": 0.9502010992773329,
+      "exact_probability": 0.950000000000412,
+      "simulation": {
+        "seed": 20261125,
+        "n": 1000000,
+        "success": 950146,
+        "probability": 0.950146,
+        "wilson_95": [
+          0.9497176951974582,
+          0.9505708463811828
+        ],
+        "linear_empirical_probability": 0.950298
+      }
+    },
+    "s=80": {
+      "sigma_p_m": 1.9000000000000001,
+      "linear_probability": 0.9153756669066699,
+      "exact_probability": 0.9150682311609527,
+      "simulation": {
+        "seed": 20261126,
+        "n": 100000,
+        "success": 91463,
+        "probability": 0.91463,
+        "wilson_95": [
+          0.9128821302444031,
+          0.9163460152978565
+        ],
+        "linear_empirical_probability": 0.91498
+      }
+    },
+    "a=bound,b=0": {
+      "sigma_p_m": 1.6367451685555632,
+      "linear_probability": 0.9502010992773329,
+      "exact_probability": 0.950000000000412,
+      "simulation": {
+        "seed": 20261127,
+        "n": 100000,
+        "success": 94996,
+        "probability": 0.94996,
+        "wilson_95": [
+          0.9485913073306006,
+          0.9512941239411238
+        ],
+        "linear_empirical_probability": 0.95001
+      }
+    },
+    "a=0,b=bound/80": {
+      "sigma_p_m": 1.6367451685555632,
+      "linear_probability": 0.9502010992773329,
+      "exact_probability": 0.950000000000412,
+      "simulation": {
+        "seed": 20261128,
+        "n": 100000,
+        "success": 95000,
+        "probability": 0.95,
+        "wilson_95": [
+          0.9486318174896535,
+          0.9513336107090218
+        ],
+        "linear_empirical_probability": 0.95069
+      }
+    }
+  },
+  "contributions": {
+    "s=0": {
+      "position": 0.15587442067573368,
+      "zero": 0.5402403707675304,
+      "control": 0.3038852085567358
+    },
+    "s=linear boundary": {
+      "position": 0.846341647172235,
+      "zero": 0.09834134580976961,
+      "control": 0.05531700701799539
+    },
+    "s=exact boundary": {
+      "position": 0.8460713166690761,
+      "zero": 0.09851435733179133,
+      "control": 0.05541432599913261
+    },
+    "s=80": {
+      "position": 0.8810491252170799,
+      "zero": 0.07612855986106891,
+      "control": 0.04282231492185125
+    }
+  },
+  "model_convention": "nominal=atan2(target-estimated)-atan2(target-true); effective=wrap(nominal+zero_offset+control_error)",
+  "seed": 20261122,
+  "quick": false,
+  "versions": {
+    "numpy": "2.5.5",
+    "scipy": "1.18.1"
+  }
+}
