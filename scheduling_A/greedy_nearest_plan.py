@@ -108,8 +108,8 @@ if __name__ == "__main__":
 
     print("\n" + "=" * 50)
     print("【论文对比分析参考】")
-    print(f"全局优化算法 Makespan: 10.60 秒")
+    print(f"全局优化算法 Makespan: 11.023442 秒")
     print(f"最近分配启发式 Makespan: {greedy_time:.2f} 秒")
-    print(f"优化提升幅度: {((greedy_time - 10.60) / greedy_time) * 100:.2f}%")
-    print("差异来源：全局优化算法能避开 A* 绕路陷阱，并合理选择 V3 作为复用车辆，大幅减少了等待耗时。")
+    print(f"优化提升幅度: {((greedy_time - 11.023442) / greedy_time) * 100:.2f}%")
+    print("差异来源：全局优化算法能避开 A* 绕路陷阱，并合理选择 V5 作为复用车辆，大幅减少了等待耗时。")
     print("=" * 50)
