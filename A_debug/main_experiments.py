@@ -148,63 +148,54 @@ def run_reschedule_pipeline(config):
         from p4_reschedule_policy import load_official_observable_points
         all_points = load_official_observable_points()
 
-    # 提取 t=5s 时的车辆状态
-    vehicle_states = {}
-    recovery_time = config.get("recovery_time")
-    if recovery_time is None:
-        recovery_time = 0.0
-
-    start_threshold = max(5.0, recovery_time)
-
+    # 先按告警而不是单车的观测结束时刻分类：扰动前已经开始的告警不可重排。
+    disruption_time = 5.0
+    base_status = get_baseline_alert_status()
     failed_vehicle = config.get("failed_vehicle")
+    affected_by_failure = {
+        alert_id for alert_id, info in base_status.items()
+        if failed_vehicle in info["vehicles"]
+        and info["observe_start"] >= disruption_time
+    }
+    # 原计划预先下发：未受故障影响的联合任务继续执行，包括通信中断期间的任务。
+    # 受故障影响的协同车在中断期间已经出发时，虽不能形成联合观测，仍须占车至复位。
+    retained_ids = set(base_status) - affected_by_failure
+    tasks = []
+    for alert_id in base_status:
+        if alert_id not in affected_by_failure:
+            continue
+        tid = int(alert_id.split("_")[1]) - 1
+        tasks.append({
+            "task_id": alert_id, "target_id": f"T{tid + 1}",
+            "target_pos": (const.TARGETS[tid]["x"], const.TARGETS[tid]["y"],
+                           const.TARGETS[tid]["z"]),
+        })
+
+    recovery_time = config.get("recovery_time") or 0.0
+    start_threshold = max(disruption_time, recovery_time)
+    vehicle_states = {}
     for i in range(1, 6):
         vid = f"V{i}"
         if vid == failed_vehicle:
             vehicle_states[vid] = {"failed": True, "position": (0, 0), "available_time": 999.0}
             continue
-
-        cutoff = start_threshold
-        pos = (const.INITIAL_VEHICLE_POSITIONS[i - 1]["x"], const.INITIAL_VEHICLE_POSITIONS[i - 1]["y"])
-        avail_time = cutoff
-        for task in sorted(BASELINE_PLAN[vid], key=lambda item: item["depart"]):
-            # 只承认中断/故障前已下发的基准任务；未来任务不应被假定已执行。
-            if task["depart"] >= cutoff - 1e-8:
+        pos = (const.INITIAL_VEHICLE_POSITIONS[i - 1]["x"],
+               const.INITIAL_VEHICLE_POSITIONS[i - 1]["y"])
+        avail_time = start_threshold
+        for baseline_task in sorted(BASELINE_PLAN[vid], key=lambda item: item["depart"]):
+            task_id = baseline_task["task_id"]
+            # 保留的原任务不得被新计划覆盖；故障影响的协同车如已按
+            # 原命令出发，也须占车至复位，不能把在途车辆当作空闲车。
+            executed = (task_id in retained_ids or
+                        (task_id in affected_by_failure and
+                         baseline_task["depart"] < start_threshold))
+            if not executed:
                 continue
-            pos = task["station"]
-            if task["reset_end"] > cutoff + 1e-8:
-                # 已下发任务继续完成，车辆复位结束前不可再次派遣。
-                avail_time = max(avail_time, task["reset_end"])
-
+            pos = baseline_task["station"]
+            avail_time = max(avail_time, baseline_task["reset_end"])
         vehicle_states[vid] = {
-            "failed": False,
-            "position": pos,
-            "available_time": avail_time
+            "failed": False, "position": pos, "available_time": avail_time,
         }
-
-    # 需要重调度的告警：故障车导致的未完成任务，以及重调度时刻尚未开始的任务。
-    # 通信中断期间原计划已下发的任务照常执行，已开始的任务不重复派发。
-    tasks = []
-    base_status = get_baseline_alert_status()
-    affected_by_failure = set()
-    if config.get("failed_vehicle"):
-        for alert_id, info in base_status.items():
-            if config["failed_vehicle"] in info["vehicles"]:
-                vehicle_tasks = BASELINE_PLAN[config["failed_vehicle"]]
-                assignment = next((t for t in vehicle_tasks if t["task_id"] == alert_id), None)
-                # 故障车承担该告警的任务尚未观测完成时，需要重派整项双车任务。
-                if assignment and assignment["observe_end"] > 5.0 + 1e-8:
-                    affected_by_failure.add(alert_id)
-
-    for alert_id, info in base_status.items():
-        unfinished_at_reschedule = info["observe_start"] >= start_threshold - 1e-8
-        if unfinished_at_reschedule or alert_id in affected_by_failure:
-            tid = int(alert_id.split("_")[1]) - 1
-            tasks.append({
-                "task_id": alert_id,
-                "target_id": f"T{tid + 1}",
-                "target_pos": (const.TARGETS[tid]["x"], const.TARGETS[tid]["y"],
-                               const.TARGETS[tid]["z"]),
-            })
 
     if config.get("new_alert"):
         tx, ty = _polar_to_cartesian(config["new_alert"]["azimuth"],
@@ -215,29 +206,11 @@ def run_reschedule_pipeline(config):
     if not tasks:
         return run_keep_original_pipeline(config)
 
-    # 适配器
     def station_options_func(vid, task, state):
         return get_station_options_adapter(vid, task, state, all_points)
 
-    # 重调度统一在扰动时刻开始；通信中断时只允许恢复后启动调度。
+    # 新指令只能在扰动发生后、通信恢复后下发。
     reschedule_time = start_threshold
-    if recovery_time > 5.0:
-        # 恢复时对未完成告警重新规划，避免恢复期遗漏已失效任务。
-        tasks = []
-        for alert_id in base_status:
-            tid = int(alert_id.split("_")[1]) - 1
-            tasks.append({
-                "task_id": alert_id,
-                "target_id": f"T{tid + 1}",
-                "target_pos": (const.TARGETS[tid]["x"], const.TARGETS[tid]["y"],
-                               const.TARGETS[tid]["z"]),
-            })
-        if config.get("new_alert"):
-            tx, ty = _polar_to_cartesian(config["new_alert"]["azimuth"],
-                                         config["new_alert"]["horizontal_distance"])
-            tasks.append({"task_id": "NEW_ALERT", "target_id": "T4",
-                          "target_pos": (tx, ty, config["new_alert"].get("altitude", 50.0))})
-
     reschedule_res = apply_reschedule(
         tasks,
         vehicle_states,
@@ -260,31 +233,29 @@ def run_reschedule_pipeline(config):
         print(f"  * {desc}")
     print("----------------------\n")
 
-    # 终态从基准方案构造：扰动前已开始的任务锁定保留；失败车任务按故障作废；
-    # 其他被重调度的原任务作废后由新分配替代。
+    # 保留仍在执行的旧任务及其复位占车；只有受故障影响的告警可被替换。
     timeline = get_baseline_timeline()
     alert_status = get_baseline_alert_status()
-    disruption_time = 5.0
-    affected_task_ids = affected_by_failure
-    rescheduled_task_ids = {t["task_id"] for t in tasks}
     for vid, entries in timeline.items():
         for task in entries:
-            if vid == failed_vehicle and task["observe_end"] > 5.0 + 1e-8:
-                task["status"] = "failed"
-                task["reason"] = f"{vid} 在 {disruption_time}s 故障，观测尚未完成"
-                task["fail_time"] = disruption_time
-            elif task["task_id"] in affected_task_ids:
-                task["status"] = "superseded"
-                task["reason"] = "协同车辆故障，原联合任务由重调度处理"
-                task["fail_time"] = 5.0
-            elif task["observe_start"] < disruption_time - 1e-8:
-                if task["reset_end"] > disruption_time + 1e-8:
+            task_id = task["task_id"]
+            if task_id in retained_ids:
+                if task["reset_end"] > disruption_time and task["observe_start"] < disruption_time:
                     task["status"] = "locked"
                     task["reason"] = "扰动前已开始观测，按题设保留完成"
-                continue
-            elif task["task_id"] in rescheduled_task_ids:
+                elif recovery_time and task["depart"] < recovery_time and task["reset_end"] > disruption_time:
+                    task["status"] = "locked"
+                    task["reason"] = "通信中断期间原命令继续执行"
+            elif vid == failed_vehicle:
+                task["status"] = "failed"
+                task["reason"] = f"{vid} 在 {disruption_time}s 故障，原联合任务无法完成"
+                task["fail_time"] = disruption_time
+            elif task["depart"] < start_threshold:
+                task["status"] = "locked"
+                task["reason"] = "原命令已下发，协同车辆占用至复位，联合任务作废"
+            else:
                 task["status"] = "superseded"
-                task["reason"] = "原计划任务由重调度结果取代"
+                task["reason"] = "故障影响的原联合任务由重调度替代"
                 task["fail_time"] = disruption_time
 
     for task in tasks:
@@ -293,11 +264,11 @@ def run_reschedule_pipeline(config):
                 "started": False, "observe_start": None, "vehicles": [],
                 "reason": "等待重调度", "target": "T4", "is_new_alert": True,
             }
-            continue
-        info = alert_status[task["task_id"]]
-        if task["task_id"] in affected_task_ids or info["observe_start"] >= disruption_time - 1e-8:
-            info.update({"started": False, "observe_start": None,
-                         "reason": "等待重调度", "vehicles": []})
+        else:
+            alert_status[task["task_id"]].update({
+                "started": False, "observe_start": None, "vehicles": [],
+                "reason": "等待重调度",
+            })
 
     for item in reschedule_res["schedule"]:
         task_id = item["task_id"]
@@ -331,7 +302,7 @@ def run_reschedule_pipeline(config):
 
     # 一致性检查：单车任务不得重叠，且警报只能在两车均已分配时计成功。
     for vid, entries in timeline.items():
-        active = sorted((t for t in entries if t.get("status") == "completed"),
+        active = sorted((t for t in entries if t.get("status") in {"completed", "locked"}),
                         key=lambda t: t["depart"])
         for previous, current in zip(active, active[1:]):
             if current["depart"] < previous["reset_end"] - 1e-8:

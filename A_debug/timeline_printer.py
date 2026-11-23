@@ -17,8 +17,8 @@ timeline 格式（与 BASELINE_PLAN 字段一致）：
             "observe_start": 7.2107,
             "observe_end": 12.2107,
             "reset_end": 15.3230,
-            "status": "completed",      # 或 "failed"
-            "reason": "",               # status != completed 时填
+            "status": "completed",      # 或 locked / failed / superseded / pending
+            "reason": "",               # 非 completed 时标明原因
         },
     ],
     ...
@@ -78,19 +78,21 @@ def print_timeline(
 
             seq += 1
 
-            # 改动 3：失败任务只打印作废原因，不打印时间
-            if status != "completed":
+            # 已下发且继续占车的锁定任务仍有完整时间线；是否形成双车观测
+            # 应以告警汇总为准，不把锁定状态误报为任务作废或自动算成功。
+            if status in {"failed", "superseded", "pending"}:
                 print(
                     f"【任务{seq} {target_label} | 站点 {station_str}】"
                     f" [状态: {status}]"
                 )
-                print(
-                    f"  作废原因:             "
-                    f"{task.get('reason', '扰动导致任务作废')}"
-                )
+                print(f"  状态原因:             {task.get('reason', '未执行')}")
                 continue
 
-            print(f"【任务{seq} {target_label} | 站点 {station_str}】")
+            print(f"【任务{seq} {target_label} | 站点 {station_str}】"
+                  f" [状态: 锁定原命令]" if status == "locked" else
+                  f"【任务{seq} {target_label} | 站点 {station_str}】")
+            if status == "locked":
+                print(f"  状态说明:             {task.get('reason', '原命令继续执行')}")
             print(f"  出发时刻:             {task['depart']:9.4f} s")
             print(
                 f"  行驶时间:             "
@@ -157,14 +159,17 @@ def plot_timeline_gantt(
     title="车辆调度时间线 (Gantt Chart)",
     show_plot=False,
 ):
-    """
-    绘制 P4 甘特图。失败任务不画条，在该车行用红色 × 标记。
-    """
+    """绘制真实执行区间；锁定原命令与失败/取消任务分别标示。"""
     try:
         import matplotlib
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
-        plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei"]
+        from matplotlib import font_manager
+        from matplotlib.patches import Patch
+        chinese_fonts = ("Microsoft YaHei", "SimHei", "Noto Sans CJK SC")
+        available_fonts = {font.name for font in font_manager.fontManager.ttflist}
+        chinese_font = next((name for name in chinese_fonts if name in available_fonts), None)
+        plt.rcParams["font.sans-serif"] = [chinese_font or "DejaVu Sans"]
         plt.rcParams["axes.unicode_minus"] = False
     except ImportError:
         print("未安装 matplotlib，跳过甘特图绘制。")
@@ -182,7 +187,6 @@ def plot_timeline_gantt(
         "wait": "#D3D3D3",
         "observe": "#32CD32",
         "reset": "#FFA07A",
-        "failed": "#FF0000",
     }
 
     vehicle_ids = sorted(timeline.keys())
@@ -191,6 +195,19 @@ def plot_timeline_gantt(
         dpi=120,
     )
     legend_done = set()
+    names = {
+        "failed": ("故障/失败", "Failed"),
+        "superseded": ("已替代/作废", "Replaced"),
+        "pending": ("待执行", "Pending"),
+        "drive": ("行驶", "Drive"),
+        "rotate": ("云台调转", "Pointing"),
+        "wait": ("同步等待", "Wait"),
+        "observe": ("联合观测（5s）", "Observe (5s)"),
+        "reset": ("云台复位", "Reset"),
+    }
+
+    def _name(key):
+        return names[key][0 if chinese_font else 1]
 
     def _label(key, text):
         if key in legend_done:
@@ -203,18 +220,26 @@ def plot_timeline_gantt(
             target_label = task.get("target", "?")
             status = task.get("status", "completed")
 
-            # 改动 3 的绘图版：失败任务画红色 ×
-            if status != "completed":
-                # 优先用 fail_time（任务作废的逻辑时刻），
-                # 没有才回退到 depart，再没有才回退到 0.0
-                fail_time = task.get("fail_time")
-                if fail_time is None:
-                    fail_time = task.get("depart", 0.0)
+            # Explicit status rendering: locked work remains physically active;
+            # failed/superseded work is cancelled; pending work has no execution interval.
+            if status in {"failed", "superseded", "pending"}:
+                marker = {"failed": "x", "superseded": "x", "pending": "o"}[status]
+                color = {"failed": "#d03b3b", "superseded": "#ec835a",
+                         "pending": "#fab219"}[status]
+                timestamp = task.get("fail_time")
+                if timestamp is None:
+                    timestamp = task.get("depart", 0.0)
                 ax.plot(
-                    fail_time, row,
-                    marker="x", color=color_map["failed"],
-                    markersize=10, markeredgewidth=2,
+                    timestamp, row, marker=marker, color=color,
+                    markerfacecolor="none" if status == "pending" else color,
+                    linestyle="None", markersize=9, markeredgewidth=2,
+                    label=_label(status, _name(status)),
                 )
+                reason = task.get("reason")
+                if reason and chinese_font:
+                    ax.annotate(reason, (timestamp, row), xytext=(4, 5),
+                                textcoords="offset points", fontsize=6,
+                                color="#52514e")
                 continue
 
             depart = task["depart"]
@@ -224,57 +249,47 @@ def plot_timeline_gantt(
             obs_end = task["observe_end"]
             reset_end = task["reset_end"]
 
-            if arrival > depart:
-                ax.barh(
-                    row, arrival - depart, left=depart, height=0.4,
-                    color=color_map["drive"], edgecolor="black",
-                    label=_label("drive", "行驶"),
-                )
-            if pointing > arrival:
-                ax.barh(
-                    row, pointing - arrival, left=arrival, height=0.4,
-                    color=color_map["rotate"], edgecolor="black",
-                    label=_label("rotate", "云台调转"),
-                )
-            if obs_start > pointing:
-                ax.barh(
-                    row, obs_start - pointing, left=pointing, height=0.4,
-                    color=color_map["wait"], edgecolor="black", hatch="//",
-                    label=_label("wait", "同步等待"),
-                )
-            ax.barh(
-                row, obs_end - obs_start, left=obs_start, height=0.4,
-                color=color_map["observe"], edgecolor="black",
-                label=_label("observe", "联合观测（5s）"),
-            )
-            if reset_end > obs_end:
-                ax.barh(
-                    row, reset_end - obs_end, left=obs_end, height=0.4,
-                    color=color_map["reset"], edgecolor="black",
-                    label=_label("reset", "云台复位"),
-                )
+            if status not in {"completed", "locked"}:
+                raise ValueError(f"未知车辆任务状态: {status!r}")
+            locked = status == "locked"
+            for start, end, color_key, hatch in (
+                (depart, arrival, "drive", None),
+                (arrival, pointing, "rotate", None),
+                (pointing, obs_start, "wait", "//"),
+                (obs_start, obs_end, "observe", None),
+                (obs_end, reset_end, "reset", None),
+            ):
+                if end > start:
+                    ax.barh(
+                        row, end - start, left=start, height=0.4,
+                        color=color_map[color_key], edgecolor="black",
+                        hatch="xx" if locked else hatch,
+                        label=_label(color_key, _name(color_key)),
+                    )
 
             ax.text(
-                (obs_start + obs_end) / 2, row, target_label,
+                (obs_start + obs_end) / 2, row,
+                f"{target_label} [{'锁定' if chinese_font else 'L'}]" if locked else target_label,
                 ha="center", va="center", fontsize=8,
             )
 
-    if any(
-        t.get("status", "completed") != "completed"
-        for tasks in timeline.values() for t in tasks
-    ):
-        ax.plot(
-            [], [], marker="x", color=color_map["failed"],
-            linestyle="None", markersize=10, label="任务作废",
-        )
-
     ax.set_yticks(range(len(vehicle_ids)))
     ax.set_yticklabels(vehicle_ids)
-    ax.set_xlabel("时间（秒）")
-    ax.set_ylabel("车辆编号")
+    ax.set_xlabel("时间（秒）" if chinese_font else "Time (s)")
+    ax.set_ylabel("车辆编号" if chinese_font else "Vehicle")
+    if not chinese_font:
+        title = title.replace("原计划", "Original").replace("重调度", "Rescheduled")
+        title = title.split(" - ")[0] + (" - Rescheduled" if "Rescheduled" in title else " - Original")
     ax.set_title(title, fontsize=12)
     ax.grid(axis="x", linestyle="--", alpha=0.4)
-    ax.legend(loc="upper right", fontsize=9)
+    if any(t.get("status") == "locked" for tasks in timeline.values() for t in tasks):
+        ax.legend(handles=[*ax.get_legend_handles_labels()[0],
+                           Patch(facecolor="white", edgecolor="black", hatch="xx",
+                                 label="锁定原命令（仍占车）" if chinese_font else
+                                       "Locked order (vehicle occupied)")],
+                  loc="upper left", bbox_to_anchor=(1.01, 1), fontsize=8)
+    else:
+        ax.legend(loc="upper left", bbox_to_anchor=(1.01, 1), fontsize=8)
 
     plt.tight_layout()
     save_path = os.path.join(save_dir, filename)
