@@ -38,7 +38,7 @@ def get_baseline_alert_status():
             if alert_id not in alert_status:
                 alert_status[alert_id] = {
                     "started": True,
-                    "observe_start": task["obs_start"],
+                    "observe_start": task["observe_start"],
                     "vehicles": [],
                 }
 
@@ -46,7 +46,7 @@ def get_baseline_alert_status():
 
             alert_status[alert_id]["observe_start"] = max(
                 alert_status[alert_id]["observe_start"],
-                task["obs_start"]
+                task["observe_start"]
             )
 
     return alert_status
@@ -161,7 +161,7 @@ def apply_failure(timeline, alert_status, failed_vehicle, fail_time=5.0):
     for task in timeline[failed_vehicle]:
 
         # 扰动前已经开始观测的任务，按题目规定视为已完成
-        if task["obs_start"] < fail_time - 1e-8:
+        if task["observe_start"] < fail_time - 1e-8:
             continue
 
         # 扰动时尚未开始观测的任务，全部作废
